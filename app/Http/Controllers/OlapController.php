@@ -50,23 +50,23 @@ class OlapController extends Controller
         $rataPendapatan = $totalTransaksi > 0 ? $totalPendapatan / $totalTransaksi : 0;
 
         // =====================================================
-        // 4. Grafik pendapatan per cabang (hanya untuk superadmin yang tidak memilih cabang spesifik)
+        // 4. Grafik pendapatan per cabang
         // =====================================================
         if ($user->role == 'superadmin' && (!$selectedCabang || $selectedCabang == 'all')) {
             $pendapatanPerCabang = $dwh->table('v_dashboard_nasional')
-                ->select('nama_kota', DB::raw('SUM(pendapatan_bersih) as total'))
+                ->select('nama_kota', $dwh->raw('SUM(pendapatan_bersih) as total')) // DIUBAH: DB::raw -> $dwh->raw
                 ->groupBy('nama_kota')
                 ->orderBy('total', 'desc')
                 ->get();
         } else {
-            $pendapatanPerCabang = collect(); // kosong, tidak ditampilkan
+            $pendapatanPerCabang = collect();
         }
 
         // =====================================================
-        // 5. Produk terlaris (selalu difilter sesuai cabang)
+        // 5. Produk terlaris
         // =====================================================
         $produkTerlaris = (clone $query)
-            ->select('nama_produk', DB::raw('SUM(jumlah_unit) as total_unit'))
+            ->select('nama_produk', $dwh->raw('SUM(jumlah_unit) as total_unit')) // DIUBAH: DB::raw -> $dwh->raw
             ->groupBy('nama_produk')
             ->orderBy('total_unit', 'desc')
             ->limit(5)
@@ -76,7 +76,7 @@ class OlapController extends Controller
         // 6. Tren pendapatan harian (30 hari terakhir)
         // =====================================================
         $trenHarian = (clone $query)
-            ->select('tanggal', DB::raw('SUM(pendapatan_bersih) as total'))
+            ->select('tanggal', $dwh->raw('SUM(pendapatan_bersih) as total')) // DIUBAH: DB::raw -> $dwh->raw
             ->groupBy('tanggal')
             ->orderBy('tanggal', 'desc')
             ->limit(30)
