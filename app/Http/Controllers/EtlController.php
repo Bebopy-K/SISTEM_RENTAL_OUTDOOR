@@ -2,20 +2,20 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Artisan;
-
 class EtlController extends Controller
 {
     public function sync()
     {
-        // Jalankan command sync:dw
-        Artisan::call('sync:dw');
+        // Path to your artisan file
+        $artisanPath = base_path('artisan');
 
-        // Ambil output command
-        $output = Artisan::output();
+        // This command runs the artisan command and redirects output to "nothing" in the background
+        if (substr(php_uname(), 0, 7) == "Windows") {
+            pclose(popen("start /B php $artisanPath sync:dw", "r"));
+        } else {
+            exec("php $artisanPath sync:dw > /dev/null 2>&1 &");
+        }
 
-        return back()->with('success', 'ETL selesai! Data Warehouse telah diperbarui.')
-                     ->with('etl_output', $output);
+        return back()->with('success', 'Proses ETL sedang berjalan di latar belakang.');
     }
 }

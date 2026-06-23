@@ -26,6 +26,9 @@
         @endif
     </div>
 
+    <!-- ========================================== -->
+    <!-- METRIK UTAMA -->
+    <!-- ========================================== -->
     <div class="row g-3 mb-4">
         <div class="col-md-6 col-lg-4">
             <div class="card border-0 shadow-sm rounded-3 bg-white p-3 h-100">
@@ -77,6 +80,9 @@
         </div>
     </div>
 
+    <!-- ========================================== -->
+    <!-- TOMBOL ETL (HANYA UNTUK SUPERADMIN) -->
+    <!-- ========================================== -->
     @if($user->role === 'superadmin')
     <div class="row mb-4">
         <div class="col-12">
@@ -91,23 +97,30 @@
                             <br>Hanya transaksi dengan status <span class="badge bg-warning text-dark">belum disinkron</span> yang akan diproses.
                         </p>
                     </div>
-                    <div class="flex-shrink-0">
-                        <button type="button" id="btn-sync-etl" class="btn btn-success px-4 py-2 shadow-sm" onclick="jalankanEtlSync()">
+                    <form method="POST" action="{{ route('etl.sync') }}" class="flex-shrink-0">
+                        @csrf
+                        <button type="submit" class="btn btn-success px-4 py-2 shadow-sm"
+                                onclick="this.disabled=true; this.innerHTML='<i class=\'fas fa-spinner fa-spin me-1\'></i> Memproses...'">
                             <i class="fas fa-upload me-1"></i> Jalankan ETL Sekarang
                         </button>
-                    </div>
+                    </form>
                 </div>
 
-                <div id="etl-output-container" class="mt-3 d-none">
-                    <hr>
-                    <strong class="small text-secondary">Output ETL:</strong>
-                    <pre id="etl-output-text" class="bg-light p-2 border rounded mt-1" style="max-height:200px; overflow-y:auto; font-size:13px;"></pre>
-                </div>
+                @if(session('etl_output'))
+                    <div class="mt-3">
+                        <hr>
+                        <strong class="small text-secondary">Output ETL:</strong>
+                        <pre class="bg-light p-2 border rounded mt-1" style="max-height:200px; overflow-y:auto; font-size:13px;">{{ session('etl_output') }}</pre>
+                    </div>
+                @endif
             </div>
         </div>
     </div>
     @endif
 
+    <!-- ========================================== -->
+    <!-- GRAFIK TREN PENDAPATAN -->
+    <!-- ========================================== -->
     <div class="row">
         <div class="col-12">
             <div class="card border-0 shadow-sm rounded-3 bg-white p-4">
@@ -129,11 +142,10 @@
 
 </div>
 
+@if(count($chartLabels) > 0)
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     document.addEventListener("DOMContentLoaded", function() {
-        // --- 1. INISIALISASI GRAFIK CHART.JS ---
-        @if(count($chartLabels) > 0)
         const ctx = document.getElementById('trenPendapatanChart').getContext('2d');
         new Chart(ctx, {
             type: 'line',
@@ -167,64 +179,7 @@
                 }
             }
         });
-        @endif
     });
-
-    // --- 2. AJAX HANDLER UNTUK SINKRONISASI ETL ---
-    function jalankanEtlSync() {
-        const tombol = document.getElementById('btn-sync-etl');
-        const outputContainer = document.getElementById('etl-output-container');
-        const outputText = document.getElementById('etl-output-text');
-
-        if (!tombol) return;
-
-        // Kunci tombol & ganti teks menjadi loading spinner
-        tombol.disabled = true;
-        tombol.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Memproses Sinkronisasi...';
-
-        // Tembak REST API Laravel via Fetch di background
-        fetch("{{ route('etl.sync') }}", {
-            method: "POST",
-            headers: {
-                "X-CSRF-TOKEN": "{{ csrf_token() }}",
-                "Content-Type": "application/json",
-                "Accept": "application/json"
-            }
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Terjadi kesalahan pada server (Status HTTP: ' + response.status + ').');
-            }
-            return response.json();
-        })
-        .then(data => {
-            if (data.status === 'success') {
-                // Tampilkan log output terminal dari Controller ke element <pre>
-                outputContainer.classList.remove('d-none');
-                outputText.innerText = data.output || 'Sinkronisasi selesai tanpa log pesan.';
-                outputText.className = "bg-light text-success p-2 border rounded mt-1";
-
-                alert(data.message || 'Sinkronisasi berhasil diselesaikan!');
-
-                // Beri jeda 1.5 detik agar user sempat membaca log, lalu reload dashboard
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1500);
-            } else {
-                alert('Gagal melakukan sinkronisasi: ' + data.message);
-                resetTombolEtl(tombol);
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('Proses gagal atau terputus (Request Timeout / Server Error 500).');
-            resetTombolEtl(tombol);
-        });
-    }
-
-    function resetTombolEtl(tombol) {
-        tombol.disabled = false;
-        tombol.innerHTML = '<i class="fas fa-upload me-1"></i> Jalankan ETL Sekarang';
-    }
 </script>
+@endif
 @endsection
