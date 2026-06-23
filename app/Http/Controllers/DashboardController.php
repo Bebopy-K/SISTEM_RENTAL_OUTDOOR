@@ -38,13 +38,13 @@ class DashboardController extends Controller
         $totalDenda = (clone $queryTransaksi)->sum('denda') ?? 0;
         $akumulasiFinansial = $totalPendapatan + $totalDenda;
 
-        // 4. Siapkan data tren bulanan untuk grafik (PostgreSQL Compliant)
+        // 4. Siapkan data tren bulanan untuk grafik (MySQL/MariaDB Compliant)
         $trenBulanan = (clone $queryTransaksi)
             ->select(
-                DB::raw("TO_CHAR(tanggal, 'YYYY-MM') as bulan"), 
+                DB::raw("DATE_FORMAT(tanggal, '%Y-%m') as bulan"),
                 DB::raw('SUM(total_harga) as total')
             )
-            ->groupBy(DB::raw("TO_CHAR(tanggal, 'YYYY-MM')")) // PostgreSQL requires the full expression in GROUP BY
+            ->groupBy(DB::raw("DATE_FORMAT(tanggal, '%Y-%m')")) // MySQL juga membutuhkan ekspresi penuh atau alias di GROUP BY
             ->orderBy('bulan', 'asc')
             ->get();
 
@@ -63,11 +63,11 @@ class DashboardController extends Controller
 
         // 5. Lempar ke view dashboard
         return view('dashboard', compact(
-            'user', 
-            'daftarCabang', 
-            'selectedBranch', 
-            'totalTransaksiCount', 
-            'akumulasiFinansial', 
+            'user',
+            'daftarCabang',
+            'selectedBranch',
+            'totalTransaksiCount',
+            'akumulasiFinansial',
             'chartLabels',
             'chartData'
         ));
