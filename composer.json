@@ -6,7 +6,7 @@
     "license": "MIT",
     "require": {
         "php": "^8.2",
-        "ext-pdo_pgsql": "*",
+        "ext-pdo_mysql": "*",
         "elgibor-solution/laravel-2fa": "^1.0",
         "guzzlehttp/guzzle": "^7.2",
         "laravel/framework": "^10.10",
