@@ -38,13 +38,13 @@ class DashboardController extends Controller
         $totalDenda = (clone $queryTransaksi)->sum('denda') ?? 0;
         $akumulasiFinansial = $totalPendapatan + $totalDenda;
 
-        // 4. Siapkan data tren bulanan untuk grafik
+        // 4. Siapkan data tren bulanan untuk grafik (PostgreSQL Compliant)
         $trenBulanan = (clone $queryTransaksi)
             ->select(
-                DB::raw("DATE_FORMAT(tanggal, '%Y-%m') as bulan"), 
+                DB::raw("TO_CHAR(tanggal, 'YYYY-MM') as bulan"), 
                 DB::raw('SUM(total_harga) as total')
             )
-            ->groupBy('bulan')
+            ->groupBy(DB::raw("TO_CHAR(tanggal, 'YYYY-MM')")) // PostgreSQL requires the full expression in GROUP BY
             ->orderBy('bulan', 'asc')
             ->get();
 
@@ -54,6 +54,7 @@ class DashboardController extends Controller
         if ($trenBulanan->isNotEmpty()) {
             foreach ($trenBulanan as $item) {
                 if ($item->bulan) {
+                    // $item->bulan will look like "2026-06"
                     $chartLabels[] = \Carbon\Carbon::parse($item->bulan . '-01')->format('F Y');
                     $chartData[] = (int) $item->total;
                 }
