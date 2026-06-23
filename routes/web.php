@@ -114,6 +114,10 @@ Route::get('/home', function () {
     return redirect()->route('dashboard');
 });
 
+Route::get('/extensions', function () {
+    return get_loaded_extensions();
+});
+
 // ==========================================
 // RUTE TESTING (HAPUS SAAT PRODUKSI)
 // ==========================================
