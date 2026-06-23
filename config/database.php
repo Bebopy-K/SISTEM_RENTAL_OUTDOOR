@@ -92,14 +92,14 @@ return [
             // 'encrypt' => env('DB_ENCRYPT', 'yes'),
             // 'trust_server_certificate' => env('DB_TRUST_SERVER_CERTIFICATE', 'false'),
         ],
-        
+
         'dwh' => [
             'driver' => 'pgsql',
-            'host' => env('DB_DWH_HOST', '127.0.0.1'),
-            'port' => env('DB_DWH_PORT', '5432'),
-            'database' => env('DB_DWH_DATABASE', 'dw_outdoor'),
-            'username' => env('DB_DWH_USERNAME', 'postgres'),
-            'password' => env('DB_DWH_PASSWORD', '0987654321'),
+            'host' => env('DB_HOST'),
+            'port' => env('DB_PORT'),
+            'database' => env('DB_DATABASE'),
+            'username' => env('DB_USERNAME'),
+            'password' => env('DB_PASSWORD'),
             'charset' => 'utf8',
             'prefix' => '',
             'schema' => 'public',
