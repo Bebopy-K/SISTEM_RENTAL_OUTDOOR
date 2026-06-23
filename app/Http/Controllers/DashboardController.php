@@ -75,11 +75,10 @@ class DashboardController extends Controller
 
     public function sync()
     {
-        try {
-            // Menjalankan command php artisan sync:dw dari dalam controller
-            Artisan::call('sync:dw');
+        set_time_limit(0);
 
-            // Mengambil output dari command jika diperlukan log-nya
+        try {
+            Artisan::call('sync:dw');
             $output = Artisan::output();
 
             return response()->json([
@@ -91,7 +90,7 @@ class DashboardController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Gagal melakukan sinkronisasi: ' . $e->getMessage()
+                'message' => 'Gagal: ' . $e->getMessage()
             ], 500);
         }
     }
