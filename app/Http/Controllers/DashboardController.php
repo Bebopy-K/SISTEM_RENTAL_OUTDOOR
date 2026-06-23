@@ -1,7 +1,7 @@
 <?php
 
 namespace App\Http\Controllers;
-use Illuminate\Support\Facades\Artisan;
+
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Transaksi;
@@ -38,13 +38,13 @@ class DashboardController extends Controller
         $totalDenda = (clone $queryTransaksi)->sum('denda') ?? 0;
         $akumulasiFinansial = $totalPendapatan + $totalDenda;
 
-        // 4. Siapkan data tren bulanan untuk grafik (MySQL/MariaDB Compliant)
+        // 4. Siapkan data tren bulanan untuk grafik
         $trenBulanan = (clone $queryTransaksi)
             ->select(
                 DB::raw("DATE_FORMAT(tanggal, '%Y-%m') as bulan"),
                 DB::raw('SUM(total_harga) as total')
             )
-            ->groupBy(DB::raw("DATE_FORMAT(tanggal, '%Y-%m')")) // MySQL juga membutuhkan ekspresi penuh atau alias di GROUP BY
+            ->groupBy('bulan')
             ->orderBy('bulan', 'asc')
             ->get();
 
@@ -54,7 +54,6 @@ class DashboardController extends Controller
         if ($trenBulanan->isNotEmpty()) {
             foreach ($trenBulanan as $item) {
                 if ($item->bulan) {
-                    // $item->bulan will look like "2026-06"
                     $chartLabels[] = \Carbon\Carbon::parse($item->bulan . '-01')->format('F Y');
                     $chartData[] = (int) $item->total;
                 }
@@ -71,27 +70,5 @@ class DashboardController extends Controller
             'chartLabels',
             'chartData'
         ));
-    }
-
-    public function sync()
-    {
-        set_time_limit(0);
-
-        try {
-            Artisan::call('sync:dw');
-            $output = Artisan::output();
-
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Sinkronisasi berhasil diselesaikan!',
-                'output' => $output
-            ], 200);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Gagal: ' . $e->getMessage()
-            ], 500);
-        }
     }
 }

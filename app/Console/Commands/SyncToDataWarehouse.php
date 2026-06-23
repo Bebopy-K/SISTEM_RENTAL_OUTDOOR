@@ -84,12 +84,7 @@ class SyncToDataWarehouse extends Command
             }
         }
 
-        // SESUDAH: Batasi hanya 500 data per batch sinkronisasi
-        $transaksis = DB::connection('mysql')->table('transaksi')
-        ->where('synced', 0)
-        ->limit(500)
-        ->get();
-
+        $this->info("Selesai. {$success} dari {$transaksis->count()} transaksi berhasil disinkron.");
         return 0;
     }
 }
