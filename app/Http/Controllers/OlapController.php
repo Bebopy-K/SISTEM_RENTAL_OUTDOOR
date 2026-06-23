@@ -11,17 +11,17 @@ class OlapController extends Controller
     public function index(Request $request)
     {
         $user = Auth::user();
-        
+
         // CHANGED: Remove 'dwh' so it automatically uses the default PostgreSQL connection from your .env
-        $dwh = DB::connection(); 
+        $dwh = DB::connection('dwh');
 
         // =====================================================
         // 1. Tentukan cabang yang akan ditampilkan
         // =====================================================
-        $selectedCabang = $request->get('cabang'); 
+        $selectedCabang = $request->get('cabang');
 
         if ($user->role == 'admin_cabang') {
-            $cabangId = $user->cabang_id; 
+            $cabangId = $user->cabang_id;
             if (!$cabangId) {
                 abort(403, 'Akun admin cabang tidak memiliki cabang yang valid.');
             }
@@ -31,7 +31,7 @@ class OlapController extends Controller
             if (!$cabangNama) {
                 abort(403, 'Cabang tidak ditemukan di Data Warehouse.');
             }
-            $selectedCabang = $cabangNama; 
+            $selectedCabang = $cabangNama;
         }
 
         // =====================================================
@@ -59,7 +59,7 @@ class OlapController extends Controller
                 ->orderBy('total', 'desc')
                 ->get();
         } else {
-            $pendapatanPerCabang = collect(); 
+            $pendapatanPerCabang = collect();
         }
 
         // =====================================================
