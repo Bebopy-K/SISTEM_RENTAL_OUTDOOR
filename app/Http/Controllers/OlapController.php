@@ -11,17 +11,17 @@ class OlapController extends Controller
     public function index(Request $request)
     {
         $user = Auth::user();
-
-        // CHANGED: Remove 'dwh' so it automatically uses the default PostgreSQL connection from your .env
         $dwh = DB::connection('dwh');
 
         // =====================================================
         // 1. Tentukan cabang yang akan ditampilkan
         // =====================================================
-        $selectedCabang = $request->get('cabang');
+        $selectedCabang = $request->get('cabang'); // untuk superadmin
 
         if ($user->role == 'admin_cabang') {
-            $cabangId = $user->cabang_id;
+            // Admin cabang: ambil nama kota dari cabang tugasnya (berdasarkan cabang_id di tabel users MySQL)
+            // Karena cabang_id di MySQL harus sama dengan id_cabang di PostgreSQL
+            $cabangId = $user->cabang_id; // dari tabel users (MySQL)
             if (!$cabangId) {
                 abort(403, 'Akun admin cabang tidak memiliki cabang yang valid.');
             }
@@ -31,7 +31,7 @@ class OlapController extends Controller
             if (!$cabangNama) {
                 abort(403, 'Cabang tidak ditemukan di Data Warehouse.');
             }
-            $selectedCabang = $cabangNama;
+            $selectedCabang = $cabangNama; // paksa hanya cabang ini
         }
 
         // =====================================================
@@ -50,7 +50,7 @@ class OlapController extends Controller
         $rataPendapatan = $totalTransaksi > 0 ? $totalPendapatan / $totalTransaksi : 0;
 
         // =====================================================
-        // 4. Grafik pendapatan per cabang
+        // 4. Grafik pendapatan per cabang (hanya untuk superadmin yang tidak memilih cabang spesifik)
         // =====================================================
         if ($user->role == 'superadmin' && (!$selectedCabang || $selectedCabang == 'all')) {
             $pendapatanPerCabang = $dwh->table('v_dashboard_nasional')
@@ -59,11 +59,11 @@ class OlapController extends Controller
                 ->orderBy('total', 'desc')
                 ->get();
         } else {
-            $pendapatanPerCabang = collect();
+            $pendapatanPerCabang = collect(); // kosong, tidak ditampilkan
         }
 
         // =====================================================
-        // 5. Produk terlaris
+        // 5. Produk terlaris (selalu difilter sesuai cabang)
         // =====================================================
         $produkTerlaris = (clone $query)
             ->select('nama_produk', DB::raw('SUM(jumlah_unit) as total_unit'))
@@ -92,7 +92,7 @@ class OlapController extends Controller
             ->get();
 
         // =====================================================
-        // 8. Data untuk filter cabang
+        // 8. Data untuk filter cabang (hanya untuk superadmin)
         // =====================================================
         $daftarCabang = [];
         if ($user->role == 'superadmin') {
