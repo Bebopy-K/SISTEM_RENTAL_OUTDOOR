@@ -1,7 +1,7 @@
 <?php
 
 namespace App\Http\Controllers;
-
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Transaksi;
@@ -71,5 +71,28 @@ class DashboardController extends Controller
             'chartLabels',
             'chartData'
         ));
+    }
+
+    public function sync()
+    {
+        try {
+            // Menjalankan command php artisan sync:dw dari dalam controller
+            Artisan::call('sync:dw');
+
+            // Mengambil output dari command jika diperlukan log-nya
+            $output = Artisan::output();
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Sinkronisasi berhasil diselesaikan!',
+                'output' => $output
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Gagal melakukan sinkronisasi: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }

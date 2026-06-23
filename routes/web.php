@@ -118,6 +118,8 @@ Route::get('/extensions', function () {
     return get_loaded_extensions();
 });
 
+Route::post('/dashboard/sync', [DashboardController::class, 'sync'])->name('dashboard.sync');
+
 // ==========================================
 // RUTE TESTING (HAPUS SAAT PRODUKSI)
 // ==========================================
