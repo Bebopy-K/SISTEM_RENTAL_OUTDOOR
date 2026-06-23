@@ -26,9 +26,6 @@
         @endif
     </div>
 
-    <!-- ========================================== -->
-    <!-- METRIK UTAMA -->
-    <!-- ========================================== -->
     <div class="row g-3 mb-4">
         <div class="col-md-6 col-lg-4">
             <div class="card border-0 shadow-sm rounded-3 bg-white p-3 h-100">
@@ -80,9 +77,6 @@
         </div>
     </div>
 
-    <!-- ========================================== -->
-    <!-- TOMBOL ETL (HANYA UNTUK SUPERADMIN) -->
-    <!-- ========================================== -->
     @if($user->role === 'superadmin')
     <div class="row mb-4">
         <div class="col-12">
@@ -97,11 +91,13 @@
                             <br>Hanya transaksi dengan status <span class="badge bg-warning text-dark">belum disinkron</span> yang akan diproses.
                         </p>
                     </div>
-                    <form method="POST" action="{{ route('etl.sync') }}" class="flex-shrink-0">
+
+                    <form id="etlForm" method="POST" action="{{ route('etl.sync') }}" class="flex-shrink-0">
                         @csrf
-                        <button type="submit" class="btn btn-success px-4 py-2 shadow-sm"
-                                onclick="this.disabled=true; this.innerHTML='<i class=\'fas fa-spinner fa-spin me-1\'></i> Memproses...'">
-                            <i class="fas fa-upload me-1"></i> Jalankan ETL Sekarang
+                        <button type="submit" id="etlButton" class="btn btn-success px-4 py-2 shadow-sm">
+                            <span id="etlBtnText">
+                                <i class="fas fa-upload me-1"></i> Jalankan ETL Sekarang
+                            </span>
                         </button>
                     </form>
                 </div>
@@ -118,9 +114,6 @@
     </div>
     @endif
 
-    <!-- ========================================== -->
-    <!-- GRAFIK TREN PENDAPATAN -->
-    <!-- ========================================== -->
     <div class="row">
         <div class="col-12">
             <div class="card border-0 shadow-sm rounded-3 bg-white p-4">
@@ -142,10 +135,28 @@
 
 </div>
 
-@if(count($chartLabels) > 0)
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <script>
     document.addEventListener("DOMContentLoaded", function() {
+        // --- 1. HANDLE TOMBOL ETL LOADING ---
+        const etlForm = document.getElementById('etlForm');
+        const etlButton = document.getElementById('etlButton');
+        const etlBtnText = document.getElementById('etlBtnText');
+
+        if (etlForm) {
+            etlForm.addEventListener('submit', function() {
+                // Change the appearance without disabling the button element immediately
+                // This keeps the HTML form request completely open and safe to transmit
+                etlButton.style.pointerEvents = 'none';
+                etlButton.classList.remove('btn-success');
+                etlButton.classList.add('btn-secondary');
+                etlBtnText.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Memproses...';
+            });
+        }
+
+        // --- 2. CHART CONFIGURATION ---
+        @if(count($chartLabels) > 0)
         const ctx = document.getElementById('trenPendapatanChart').getContext('2d');
         new Chart(ctx, {
             type: 'line',
@@ -179,7 +190,7 @@
                 }
             }
         });
+        @endif
     });
 </script>
-@endif
 @endsection
