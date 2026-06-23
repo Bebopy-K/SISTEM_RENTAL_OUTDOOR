@@ -3,12 +3,20 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Support\Facades\Artisan;
-use Illuminate\Http\Request;
 
 class EtlController extends Controller
 {
     public function sync()
     {
-        return back()->with('success', 'Test instant response');
+        // Force synchronous execution temporarily just to read the error log
+        Artisan::call('sync:dw');
+        $output = Artisan::output();
+
+        // If output is completely empty, the command is failing silently
+        if (empty($output)) {
+            $output = "The command ran but returned absolutely no output text. Check storage/logs/laravel.log";
+        }
+
+        return back()->with('success', 'Proses Selesai')->with('etl_output', $output);
     }
 }
