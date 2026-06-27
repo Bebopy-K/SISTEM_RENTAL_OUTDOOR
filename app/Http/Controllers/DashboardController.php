@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Transaksi;
 use App\Models\Cabang;
+use App\Models\EtlLog; // ← Tambahkan ini
 use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
@@ -60,7 +61,12 @@ class DashboardController extends Controller
             }
         }
 
-        // 5. Lempar ke view dashboard
+        // 5. Ambil data ETL terakhir (hanya yang sukses)
+        $lastEtl = EtlLog::where('status', 'success')
+                         ->latest('finished_at')
+                         ->first();
+
+        // 6. Lempar ke view dashboard
         return view('dashboard', compact(
             'user',
             'daftarCabang',
@@ -68,7 +74,8 @@ class DashboardController extends Controller
             'totalTransaksiCount',
             'akumulasiFinansial',
             'chartLabels',
-            'chartData'
+            'chartData',
+            'lastEtl'  // ← tambahkan variabel ini
         ));
     }
 }
