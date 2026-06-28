@@ -36,7 +36,6 @@ class User extends Authenticatable
     {
         return $this->belongsTo(Cabang::class, 'cabang_id', 'id_cabang');
     }
-
     // Relasi ke transaksi (jika ingin staff melihat transaksi miliknya sendiri)
     public function transaksis()
     {

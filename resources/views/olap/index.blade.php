@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Laporan Analitik (OLAP)')
+@section('title', 'Laporan Analitik (OLAP) - Data Warehouse')
 
 @section('content')
 <div class="row">
@@ -35,7 +35,7 @@
 </div>
 @endif
 
-{{-- TIGA KARTU METRIK UTAMA --}}
+{{-- 3 KARTU METRIK --}}
 <div class="row mb-4">
     <div class="col-md-4">
         <div class="card text-white bg-primary shadow-sm">
@@ -63,12 +63,12 @@
     </div>
 </div>
 
-{{-- GRAFIK PENDAPATAN PER CABANG (HANYA UNTUK SUPERADMIN DENGAN FILTER ALL) --}}
-@if($pendapatanPerCabang->count() > 0)
+{{-- GRAFIK PENDAPATAN PER CABANG (HANYA SUPERADMIN) --}}
+@if(Auth::user()->role == 'superadmin' && $pendapatanPerCabang->count() > 0)
 <div class="row mb-4">
     <div class="col-md-12">
         <div class="card shadow-sm">
-            <div class="card-header bg-light"><i class="fas fa-store"></i> Pendapatan per Cabang (Semua Cabang)</div>
+            <div class="card-header bg-light"><i class="fas fa-store"></i> Pendapatan per Cabang (Semua)</div>
             <div class="card-body">
                 <canvas id="cabangChart" height="300"></canvas>
             </div>
@@ -77,7 +77,7 @@
 </div>
 @endif
 
-{{-- DUA GRAFIK: PRODUK TERLARIS DAN TREN HARIAN --}}
+{{-- GRAFIK PRODUK TERLARIS & TREN HARIAN --}}
 <div class="row mb-4">
     <div class="col-md-6">
         <div class="card shadow-sm">
@@ -89,7 +89,7 @@
     </div>
     <div class="col-md-6">
         <div class="card shadow-sm">
-            <div class="card-header bg-light"><i class="fas fa-chart-line"></i> Tren Pendapatan Harian (30 hari terakhir)</div>
+            <div class="card-header bg-light"><i class="fas fa-chart-line"></i> Tren Pendapatan Harian (30 hari)</div>
             <div class="card-body">
                 <canvas id="trenChart" height="300"></canvas>
             </div>
@@ -141,8 +141,8 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        @if($pendapatanPerCabang->count() > 0)
-            // Grafik Pendapatan per Cabang (hanya untuk superadmin)
+        @if(Auth::user()->role == 'superadmin' && $pendapatanPerCabang->count() > 0)
+            // Grafik Pendapatan per Cabang
             const cabangLabels = @json($pendapatanPerCabang->pluck('nama_kota'));
             const cabangData = @json($pendapatanPerCabang->pluck('total'));
             const ctxCabang = document.getElementById('cabangChart').getContext('2d');

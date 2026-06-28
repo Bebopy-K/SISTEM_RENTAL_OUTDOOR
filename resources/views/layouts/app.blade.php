@@ -13,6 +13,9 @@
         .navbar-brand i { margin-right: 8px; }
         .card-header { font-weight: bold; }
         footer { margin-top: 50px; text-align: center; padding: 20px; background: #f8f9fa; }
+        .dropdown-menu { background-color: #343a40; }
+        .dropdown-item { color: #fff; }
+        .dropdown-item:hover { background-color: #495057; color: #fff; }
     </style>
     @stack('styles')
 </head>
@@ -27,26 +30,68 @@
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ route('dashboard') }}"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ route('transaksi.index') }}"><i class="fas fa-exchange-alt"></i> Transaksi</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ route('transaksi.create') }}"><i class="fas fa-plus-circle"></i> Tambah Transaksi</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ route('olap') }}"><i class="fas fa-chart-line"></i> Laporan OLAP</a>
-                    </li>
-                    <li class="nav-item">
-                        <form action="{{ route('logout') }}" method="POST" class="d-inline">
-                            @csrf
-                            <button type="submit" class="btn btn-link nav-link" style="display: inline; cursor: pointer;">
-                                <i class="fas fa-sign-out-alt"></i> Logout
-                            </button>
-                        </form>
-                    </li>
+                    {{-- MENU UNTUK USER YANG SUDAH LOGIN --}}
+                    @auth
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ route('dashboard') }}"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ route('transaksi.index') }}"><i class="fas fa-exchange-alt"></i> Transaksi</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ route('transaksi.create') }}"><i class="fas fa-plus-circle"></i> Tambah Transaksi</a>
+                        </li>
+
+                        {{-- Laporan OLAP hanya untuk Superadmin & Manager (tidak untuk Staff) --}}
+                        @if(Auth::user()->role !== 'staff')
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ route('olap') }}"><i class="fas fa-chart-line"></i> Laporan OLAP</a>
+                        </li>
+                        @endif
+
+                        {{-- MASTER DATA (HANYA UNTUK SUPERADMIN) --}}
+                        @if(Auth::user()->role === 'superadmin')
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="masterDataDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-cogs"></i> Master Data
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="masterDataDropdown">
+                                <li>
+                                    <a class="dropdown-item" href="{{ route('cabang.index') }}">
+                                        <i class="fas fa-store me-2"></i> Cabang
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ route('produk.index') }}">
+                                        <i class="fas fa-box me-2"></i> Produk
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ route('users.index') }}">
+                                        <i class="fas fa-users me-2"></i> Manajemen User
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
+                        @endif
+
+                        <li class="nav-item">
+                            <form action="{{ route('logout') }}" method="POST" class="d-inline">
+                                @csrf
+                                <button type="submit" class="btn btn-link nav-link" style="display: inline; cursor: pointer;">
+                                    <i class="fas fa-sign-out-alt"></i> Logout
+                                </button>
+                            </form>
+                        </li>
+                    @endauth
+
+                    {{-- MENU UNTUK USER YANG BELUM LOGIN --}}
+                    @guest
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ route('login') }}"><i class="fas fa-sign-in-alt"></i> Login</a>
+                        </li>
+                    @endguest
                 </ul>
             </div>
         </div>

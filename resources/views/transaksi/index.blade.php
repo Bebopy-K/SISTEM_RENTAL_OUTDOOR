@@ -99,18 +99,23 @@
                                     <span class="text-muted opacity-50">-</span>
                                 @endif
                             </td>
+                            {{-- === PERUBAHAN: KOLOM AKSI === --}}
                             <td class="text-center">
                                 <div class="d-flex justify-content-center gap-1">
-                                    <a href="{{ route('transaksi.edit', $t->id_transaksi) }}" class="btn btn-sm btn-outline-warning p-2" title="Edit Data">
-                                        <i class="fas fa-edit"></i>
-                                    </a>
-                                    <form action="{{ route('transaksi.destroy', $t->id_transaksi) }}" method="POST" onsubmit="return confirm('Yakin hapus transaksi #{{ $t->id_transaksi }}?')" class="d-inline">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-outline-danger p-2" title="Hapus Data">
-                                            <i class="fas fa-trash-alt"></i>
-                                        </button>
-                                    </form>
+                                    @if(Auth::user()->role !== 'staff')
+                                        <a href="{{ route('transaksi.edit', $t->id_transaksi) }}" class="btn btn-sm btn-outline-warning p-2" title="Edit Data">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <form action="{{ route('transaksi.destroy', $t->id_transaksi) }}" method="POST" onsubmit="return confirm('Yakin hapus transaksi #{{ $t->id_transaksi }}?')" class="d-inline">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-sm btn-outline-danger p-2" title="Hapus Data">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                        </form>
+                                    @else
+                                        <span class="text-muted small">Hanya baca</span>
+                                    @endif
                                 </div>
                             </td>
                         </tr>
@@ -127,7 +132,7 @@
             </table>
         </div>
 
-        {{-- PAGINATION CUSTOM (Hanya menampilkan beberapa halaman di sekitar halaman aktif) --}}
+        {{-- PAGINATION --}}
         <div class="card-footer bg-white border-0 d-flex flex-column flex-md-row justify-content-between align-items-center py-3 px-4">
             <div class="small text-muted mb-2 mb-md-0">
                 Menampilkan 
@@ -152,15 +157,13 @@
                             @endif
 
                             @php
-                                // Logika untuk menampilkan hanya beberapa halaman di sekitar halaman aktif
                                 $currentPage = $transaksis->currentPage();
                                 $lastPage = $transaksis->lastPage();
-                                $side = 2; // Jumlah halaman di kiri dan kanan
+                                $side = 2;
                                 $start = max(1, $currentPage - $side);
                                 $end = min($lastPage, $currentPage + $side);
                             @endphp
 
-                            {{-- Link ke halaman pertama --}}
                             @if ($start > 1)
                                 <li class="page-item">
                                     <a class="page-link" href="{{ $transaksis->url(1) }}">1</a>
@@ -170,7 +173,6 @@
                                 @endif
                             @endif
 
-                            {{-- Halaman di sekitar halaman aktif --}}
                             @for ($page = $start; $page <= $end; $page++)
                                 @if ($page == $currentPage)
                                     <li class="page-item active" aria-current="page"><span class="page-link">{{ $page }}</span></li>
@@ -181,7 +183,6 @@
                                 @endif
                             @endfor
 
-                            {{-- Link ke halaman terakhir --}}
                             @if ($end < $lastPage)
                                 @if ($end < $lastPage - 1)
                                     <li class="page-item disabled"><span class="page-link">...</span></li>
@@ -191,7 +192,6 @@
                                 </li>
                             @endif
 
-                            {{-- Next Page Link --}}
                             @if ($transaksis->hasMorePages())
                                 <li class="page-item">
                                     <a class="page-link" href="{{ $transaksis->nextPageUrl() }}" rel="next">&raquo;</a>

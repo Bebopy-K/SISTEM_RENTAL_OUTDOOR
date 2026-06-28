@@ -8,7 +8,9 @@ use App\Http\Controllers\OlapController;
 use App\Http\Controllers\GoogleLoginController;
 use App\Http\Controllers\TwoFactorController;
 use App\Http\Controllers\EtlController;
-use App\Http\Controllers\UserController; // <-- Tambahkan ini
+use App\Http\Controllers\UserController;
+use App\Http\Controllers\CabangController;   // <-- Tambahkan
+use App\Http\Controllers\ProdukController;   // <-- Tambahkan
 use Illuminate\Support\Facades\Password;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -24,6 +26,10 @@ use App\Models\User;
 // Halaman awal -> redirect ke login
 Route::get('/', function () {
     return redirect()->route('login');
+});
+
+Route::get('/users/create', function () {
+    return redirect()->route('user.create');
 });
 
 // ==========================================
@@ -122,10 +128,12 @@ Route::middleware(['auth', 'twofactor', 'role:superadmin'])->group(function () {
 });
 
 // ==========================================
-// RUTE MANAJEMEN USER (KHUSUS SUPERADMIN)
+// RUTE MANAJEMEN USER, CABANG, PRODUK (KHUSUS SUPERADMIN)
 // ==========================================
 Route::middleware(['auth', 'twofactor', 'role:superadmin'])->group(function () {
     Route::resource('users', UserController::class);
+    Route::resource('cabang', CabangController::class);
+    Route::resource('produk', ProdukController::class);
 });
 
 // Pengalihan /home ke dashboard (tidak perlu 2FA karena hanya redirect)

@@ -10,13 +10,8 @@ use Illuminate\Support\Facades\Auth;
 
 class UserController extends Controller
 {
-    /**
-     * Display a listing of the users.
-     * Hanya bisa diakses oleh superadmin.
-     */
     public function index()
     {
-        // Cek apakah user yang login adalah superadmin
         if (Auth::user()->role !== 'superadmin') {
             abort(403, 'Hanya superadmin yang dapat mengakses halaman ini.');
         }
@@ -25,22 +20,16 @@ class UserController extends Controller
         return view('users.index', compact('users'));
     }
 
-    /**
-     * Show the form for creating a new user.
-     */
     public function create()
     {
         if (Auth::user()->role !== 'superadmin') {
             abort(403);
         }
 
-        $cabangs = Cabang::all();
+        $cabangs = Cabang::all(); // ← PASTIKAN MODEL Cabang
         return view('users.create', compact('cabangs'));
     }
 
-    /**
-     * Store a newly created user in storage.
-     */
     public function store(Request $request)
     {
         if (Auth::user()->role !== 'superadmin') {
@@ -51,7 +40,7 @@ class UserController extends Controller
             'username' => 'required|string|max:50|unique:users,username',
             'password' => 'required|string|min:6',
             'role' => 'required|in:superadmin,manager,staff',
-            'cabang_id' => 'nullable|exists:dim_cabang,id_cabang',
+            'cabang_id' => 'nullable|exists:cabang,id_cabang', // ← DIUBAH
             'email' => 'nullable|email|unique:users,email',
         ]);
 
@@ -67,9 +56,6 @@ class UserController extends Controller
             ->with('success', 'User berhasil ditambahkan.');
     }
 
-    /**
-     * Show the form for editing the specified user.
-     */
     public function edit($id)
     {
         if (Auth::user()->role !== 'superadmin') {
@@ -77,20 +63,11 @@ class UserController extends Controller
         }
 
         $user = User::findOrFail($id);
-        $cabangs = Cabang::all();
-
-        // Superadmin tidak boleh diedit oleh siapapun (termasuk dirinya sendiri?)
-        // Kita biarkan untuk keamanan, tapi bisa diubah jika perlu.
-        // if ($user->role === 'superadmin' && $user->id_user !== Auth::id()) {
-        //     abort(403, 'Tidak dapat mengedit superadmin lain.');
-        // }
+        $cabangs = Cabang::all(); // ← PASTIKAN MODEL Cabang
 
         return view('users.edit', compact('user', 'cabangs'));
     }
 
-    /**
-     * Update the specified user in storage.
-     */
     public function update(Request $request, $id)
     {
         if (Auth::user()->role !== 'superadmin') {
@@ -102,7 +79,7 @@ class UserController extends Controller
         $request->validate([
             'username' => 'required|string|max:50|unique:users,username,' . $id . ',id_user',
             'role' => 'required|in:superadmin,manager,staff',
-            'cabang_id' => 'nullable|exists:dim_cabang,id_cabang',
+            'cabang_id' => 'nullable|exists:cabang,id_cabang', // ← DIUBAH
             'email' => 'nullable|email|unique:users,email,' . $id . ',id_user',
         ]);
 
@@ -113,7 +90,6 @@ class UserController extends Controller
             'email' => $request->email,
         ];
 
-        // Jika password diisi, update password
         if ($request->filled('password')) {
             $request->validate(['password' => 'min:6']);
             $data['password'] = Hash::make($request->password);
@@ -125,9 +101,6 @@ class UserController extends Controller
             ->with('success', 'User berhasil diperbarui.');
     }
 
-    /**
-     * Remove the specified user from storage.
-     */
     public function destroy($id)
     {
         if (Auth::user()->role !== 'superadmin') {
@@ -136,17 +109,10 @@ class UserController extends Controller
 
         $user = User::findOrFail($id);
 
-        // Jangan izinkan menghapus diri sendiri
         if ($user->id_user === Auth::id()) {
             return redirect()->route('users.index')
                 ->with('error', 'Anda tidak dapat menghapus akun sendiri.');
         }
-
-        // Jangan izinkan menghapus superadmin lain (opsional)
-        // if ($user->role === 'superadmin') {
-        //     return redirect()->route('users.index')
-        //         ->with('error', 'Tidak dapat menghapus superadmin.');
-        // }
 
         $user->delete();
 

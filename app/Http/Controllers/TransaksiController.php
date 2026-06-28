@@ -14,10 +14,14 @@ class TransaksiController extends Controller
         $user = Auth::user();
         $query = Transaksi::with(['produk', 'cabang', 'user']);
 
-        // Filter berdasarkan role (RBAC)
-        if ($user->role === 'admin_cabang') {
+        // =============================================
+        // FILTER CABANG BERDASARKAN ROLE
+        // =============================================
+        // Manager dan Staff hanya melihat cabangnya sendiri
+        if (in_array($user->role, ['manager', 'staff'])) {
             $query->where('cabang_id', $user->cabang_id);
         }
+        // Superadmin bisa melihat semua (tidak difilter otomatis)
 
         // Fitur Pencarian (berdasarkan ID atau Nama Produk)
         if ($request->filled('search')) {
@@ -35,7 +39,7 @@ class TransaksiController extends Controller
         $sortOrder = $request->get('sort_order', 'desc');
         $query->orderBy($sortBy, $sortOrder);
 
-        // Pagination (ubah 10 menjadi 25 atau 50 jika ingin lebih banyak per halaman)
+        // Pagination
         $transaksis = $query->paginate(10)->appends($request->query());
 
         return view('transaksi.index', compact('transaksis'));
@@ -59,6 +63,9 @@ class TransaksiController extends Controller
         ]);
 
         $user = Auth::user();
+
+        // Manager/Staff: ambil cabang dari user
+        // Superadmin: jika tidak punya cabang, fallback ke 1
         $cabangId = $user->cabang_id ?? 1;
         $tanggalHariIni = now()->toDateString();
         $denda = $request->denda ?? 0;
@@ -94,13 +101,38 @@ class TransaksiController extends Controller
 
     public function edit($id)
     {
+        $user = Auth::user();
+        // Staff tidak diizinkan mengedit
+        if ($user->role === 'staff') {
+            abort(403, 'Staff tidak diizinkan mengedit transaksi.');
+        }
+
         $transaksi = Transaksi::where('id_transaksi', $id)->firstOrFail();
+
+        // Manager hanya bisa edit transaksi di cabangnya
+        if ($user->role === 'manager' && $transaksi->cabang_id !== $user->cabang_id) {
+            abort(403, 'Anda tidak memiliki akses ke transaksi cabang lain.');
+        }
+
         $produks = Produk::all();
         return view('transaksi.edit', compact('transaksi', 'produks'));
     }
 
     public function update(Request $request, $id)
     {
+        $user = Auth::user();
+        // Staff tidak diizinkan mengupdate
+        if ($user->role === 'staff') {
+            abort(403, 'Staff tidak diizinkan mengupdate transaksi.');
+        }
+
+        $transaksi = Transaksi::where('id_transaksi', $id)->firstOrFail();
+
+        // Manager hanya bisa update transaksi di cabangnya
+        if ($user->role === 'manager' && $transaksi->cabang_id !== $user->cabang_id) {
+            abort(403, 'Anda tidak memiliki akses ke transaksi cabang lain.');
+        }
+
         $request->validate([
             'produk_id' => 'required|exists:produk,id_produk',
             'jumlah'    => 'required|integer|min:1',
@@ -108,7 +140,6 @@ class TransaksiController extends Controller
             'denda'     => 'required|integer|min:0',
         ]);
 
-        $transaksi = Transaksi::where('id_transaksi', $id)->firstOrFail();
         $produk = Produk::find($request->produk_id);
         $totalHarga = $request->jumlah * $request->durasi * $produk->harga_sewa;
 
@@ -125,7 +156,19 @@ class TransaksiController extends Controller
 
     public function destroy($id)
     {
+        $user = Auth::user();
+        // Staff tidak diizinkan menghapus
+        if ($user->role === 'staff') {
+            abort(403, 'Staff tidak diizinkan menghapus transaksi.');
+        }
+
         $transaksi = Transaksi::where('id_transaksi', $id)->firstOrFail();
+
+        // Manager hanya bisa hapus transaksi di cabangnya
+        if ($user->role === 'manager' && $transaksi->cabang_id !== $user->cabang_id) {
+            abort(403, 'Anda tidak memiliki akses ke transaksi cabang lain.');
+        }
+
         $transaksi->delete();
         return redirect()->route('transaksi.index')->with('success', 'Data transaksi berhasil dihapus!');
     }
