@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Models\AuditLog;
 
 class AuthController extends Controller
 {
@@ -13,7 +14,7 @@ class AuthController extends Controller
         return view('auth.login');
     }
 
-    // 2. Proses Login dengan Rate Limiting Manual (Session)
+    // 2. Proses Login dengan Rate Limiting + Audit Log
     public function login(Request $request)
     {
         $loginValue = $request->input('username');
@@ -33,9 +34,7 @@ class AuthController extends Controller
         $attempts = session($sessionKey, 0);
         $lastAttemptTime = session($sessionKey . '_time', null);
 
-        // Jika sudah 5 kali percobaan
         if ($attempts >= 5) {
-            // Cek apakah masih dalam masa jeda (3 menit)
             if ($lastAttemptTime) {
                 $diff = now()->diffInSeconds($lastAttemptTime);
                 if ($diff < 180) {
@@ -45,7 +44,6 @@ class AuthController extends Controller
                         'username' => "Terlalu banyak percobaan login. Silakan coba lagi dalam {$minutes} menit.",
                     ])->withInput($request->only('username'));
                 } else {
-                    // Reset jika sudah lebih dari 3 menit
                     session([$sessionKey => 0]);
                     session([$sessionKey . '_time' => null]);
                 }
@@ -65,6 +63,20 @@ class AuthController extends Controller
             session([$sessionKey => 0]);
             session([$sessionKey . '_time' => null]);
             $request->session()->regenerate();
+
+            // =====================================================
+            // AUDIT LOG: Catat login berhasil
+            // =====================================================
+            AuditLog::create([
+                'user_id' => Auth::id(),
+                'username' => Auth::user()->username,
+                'role' => Auth::user()->role,
+                'action' => 'login',
+                'description' => 'Login berhasil',
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ]);
+
             return redirect()->intended('dashboard');
         }
 
@@ -72,7 +84,7 @@ class AuthController extends Controller
         session([$sessionKey => $attempts + 1]);
         session([$sessionKey . '_time' => now()]);
 
-        // Coba dengan field alternatif (jika input email, coba username; dan sebaliknya)
+        // Coba dengan field alternatif
         $alternativeField = ($field === 'email') ? 'username' : 'email';
         $alternativeCredentials = [
             $alternativeField => $loginValue,
@@ -80,25 +92,61 @@ class AuthController extends Controller
         ];
 
         if (Auth::attempt($alternativeCredentials)) {
-            // Login berhasil dengan field alternatif
             session([$sessionKey => 0]);
             session([$sessionKey . '_time' => null]);
             $request->session()->regenerate();
+
+            AuditLog::create([
+                'user_id' => Auth::id(),
+                'username' => Auth::user()->username,
+                'role' => Auth::user()->role,
+                'action' => 'login',
+                'description' => 'Login berhasil (alternatif field)',
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ]);
+
             return redirect()->intended('dashboard');
         }
 
-        // Jika semua gagal, kembalikan error
+        // =====================================================
+        // AUDIT LOG: Catat login gagal (tanpa user_id karena belum login)
+        // =====================================================
+        AuditLog::create([
+            'user_id' => null,
+            'username' => $loginValue,
+            'role' => null,
+            'action' => 'login_failed',
+            'description' => 'Percobaan login gagal',
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+        ]);
+
         return back()->withErrors([
             'username' => 'Username/email atau password yang Anda masukkan salah.',
         ])->withInput($request->only('username'));
     }
 
-    // 3. Proses Logout
+    // 3. Proses Logout + Audit Log
     public function logout(Request $request)
     {
+        // Audit log logout (hanya jika user masih login)
+        if (Auth::check()) {
+            AuditLog::create([
+                'user_id' => Auth::id(),
+                'username' => Auth::user()->username,
+                'role' => Auth::user()->role,
+                'action' => 'logout',
+                'description' => 'Logout berhasil',
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ]);
+        }
+
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+
         return redirect()->route('login');
     }
 }
