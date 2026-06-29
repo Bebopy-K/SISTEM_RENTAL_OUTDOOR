@@ -41,7 +41,7 @@ class DashboardController extends Controller
         // 4. Siapkan data tren bulanan untuk grafik
         $trenBulanan = (clone $queryTransaksi)
             ->select(
-                DB::raw("DATE_FORMAT(tanggal, '%Y-%m') as bulan"),
+                DB::raw("DATE_FORMAT(tanggal, '%Y-%m') as bulan"), 
                 DB::raw('SUM(total_harga) as total')
             )
             ->groupBy('bulan')
@@ -62,11 +62,11 @@ class DashboardController extends Controller
 
         // 5. Lempar ke view dashboard
         return view('dashboard', compact(
-            'user',
-            'daftarCabang',
-            'selectedBranch',
-            'totalTransaksiCount',
-            'akumulasiFinansial',
+            'user', 
+            'daftarCabang', 
+            'selectedBranch', 
+            'totalTransaksiCount', 
+            'akumulasiFinansial', 
             'chartLabels',
             'chartData'
         ));
