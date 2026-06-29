@@ -14,7 +14,7 @@
             <form method="GET" action="{{ route('dashboard') }}" class="d-flex align-items-center gap-2 mb-0">
                 <label for="id_cabang" class="small text-secondary fw-bold text-nowrap mb-0"><i class="fas fa-filter text-primary me-1"></i> Wilayah:</label>
                 <select name="id_cabang" id="id_cabang" class="form-select form-select-sm border-0 bg-light" onchange="this.form.submit()">
-                    <option value="all" {{ $selectedBranch == 'all' || !$selectedBranch ? 'selected' : '' }}>Semua Cabang NAGIB NADIR</option>
+                    <option value="all" {{ $selectedBranch == 'all' || !$selectedBranch ? 'selected' : '' }}>Semua Cabang Nasional</option>
                     @foreach($daftarCabang as $cab)
                         <option value="{{ $cab->id_cabang }}" {{ $selectedBranch == $cab->id_cabang ? 'selected' : '' }}>
                             {{ $cab->nama_kota }}
