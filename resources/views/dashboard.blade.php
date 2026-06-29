@@ -26,6 +26,7 @@
         @endif
     </div>
 
+    {{-- CARD STATISTIK --}}
     <div class="row g-3 mb-4">
         <div class="col-md-6 col-lg-4">
             <div class="card border-0 shadow-sm rounded-3 bg-white p-3 h-100">
@@ -77,6 +78,7 @@
         </div>
     </div>
 
+    {{-- ETL CARD --}}
     @if($user->role === 'superadmin')
     <div class="row mb-4">
         <div class="col-12">
@@ -102,6 +104,37 @@
                     </form>
                 </div>
 
+                {{-- 🆕 INFORMASI ETL TERAKHIR --}}
+                @if(isset($lastEtl) && $lastEtl)
+                    <div class="mt-3 p-3 bg-light rounded border">
+                        <div class="row g-2">
+                            <div class="col-md-5">
+                                <span class="text-muted small text-uppercase fw-bold">🔄 ETL Terakhir</span>
+                                <p class="fw-bold mb-0">
+                                    {{ $lastEtl->finished_at ? $lastEtl->finished_at->format('d M Y H:i:s') : '-' }}
+                                </p>
+                            </div>
+                            <div class="col-md-4">
+                                <span class="text-muted small text-uppercase fw-bold">📦 Data Disinkron</span>
+                                <p class="fw-bold mb-0">{{ $lastEtl->records_synced }} transaksi</p>
+                            </div>
+                            <div class="col-md-3">
+                                <span class="text-muted small text-uppercase fw-bold">✅ Status</span>
+                                <p class="fw-bold mb-0">
+                                    <span class="badge bg-{{ $lastEtl->status === 'success' ? 'success' : 'danger' }}">
+                                        {{ ucfirst($lastEtl->status) }}
+                                    </span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                @else
+                    <div class="mt-3 text-muted small">
+                        <i class="fas fa-info-circle me-1"></i> Belum ada riwayat ETL yang tercatat.
+                    </div>
+                @endif
+                {{-- AKHIR INFORMASI ETL --}}
+
                 @if(session('etl_output'))
                     <div class="mt-3">
                         <hr>
@@ -114,6 +147,7 @@
     </div>
     @endif
 
+    {{-- GRAFIK --}}
     <div class="row">
         <div class="col-12">
             <div class="card border-0 shadow-sm rounded-3 bg-white p-4">
@@ -146,8 +180,6 @@
 
         if (etlForm) {
             etlForm.addEventListener('submit', function() {
-                // Change the appearance without disabling the button element immediately
-                // This keeps the HTML form request completely open and safe to transmit
                 etlButton.style.pointerEvents = 'none';
                 etlButton.classList.remove('btn-success');
                 etlButton.classList.add('btn-secondary');

@@ -2,19 +2,23 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Produk extends Model
 {
-    use HasFactory;
-
     protected $table = 'produk';
     protected $primaryKey = 'id_produk';
+    public $timestamps = true;
 
     protected $fillable = [
         'kode_produk',
         'nama_produk',
-        'harga_sewa'
+        'harga_sewa',
     ];
+
+    // Relasi ke transaksi
+    public function transaksi()
+    {
+        return $this->hasMany(Transaksi::class, 'produk_id', 'id_produk');
+    }
 }

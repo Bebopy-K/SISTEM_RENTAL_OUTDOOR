@@ -9,34 +9,48 @@ use App\Models\Produk;
 
 class TransaksiController extends Controller
 {
-    // 1. Menampilkan Semua Riwayat Transaksi (Halaman Index)
-    public function index()
+    public function index(Request $request)
     {
         $user = Auth::user();
-        
-        // Pembatasan data berdasarkan hak akses Cabang (RBAC)
-        if ($user->role === 'admin_cabang') {
-            $transaksis = Transaksi::with(['produk', 'cabang'])
-                ->where('cabang_id', $user->cabang_id)
-                ->orderBy('id_transaksi', 'desc')
-                ->get();
-        } else {
-            $transaksis = Transaksi::with(['produk', 'cabang'])
-                ->orderBy('id_transaksi', 'desc')
-                ->get();
+        $query = Transaksi::with(['produk', 'cabang', 'user']);
+
+        // =============================================
+        // FILTER CABANG BERDASARKAN ROLE
+        // =============================================
+        // Manager dan Staff hanya melihat cabangnya sendiri
+        if (in_array($user->role, ['manager', 'staff'])) {
+            $query->where('cabang_id', $user->cabang_id);
         }
-        
+        // Superadmin bisa melihat semua (tidak difilter otomatis)
+
+        // Fitur Pencarian (berdasarkan ID atau Nama Produk)
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('id_transaksi', 'LIKE', "%{$search}%")
+                  ->orWhereHas('produk', function ($sub) use ($search) {
+                      $sub->where('nama_produk', 'LIKE', "%{$search}%");
+                  });
+            });
+        }
+
+        // Sorting
+        $sortBy = $request->get('sort_by', 'id_transaksi');
+        $sortOrder = $request->get('sort_order', 'desc');
+        $query->orderBy($sortBy, $sortOrder);
+
+        // Pagination
+        $transaksis = $query->paginate(10)->appends($request->query());
+
         return view('transaksi.index', compact('transaksis'));
     }
 
-    // 2. Menampilkan Form Tambah Transaksi Multi-Item
     public function create()
     {
         $produks = Produk::all();
         return view('transaksi.create', compact('produks'));
     }
 
-    // 3. Menyimpan Data Transaksi Baru (Bisa Banyak Barang Sekaligus)
     public function store(Request $request)
     {
         $request->validate([
@@ -49,15 +63,17 @@ class TransaksiController extends Controller
         ]);
 
         $user = Auth::user();
-        $cabangId = $user->cabang_id ?? 1; 
+
+        // Manager/Staff: ambil cabang dari user
+        // Superadmin: jika tidak punya cabang, fallback ke 1
+        $cabangId = $user->cabang_id ?? 1;
         $tanggalHariIni = now()->toDateString();
+        $denda = $request->denda ?? 0;
 
         foreach ($request->produk_id as $index => $prodId) {
             $produk = Produk::find($prodId);
             $qty = $request->jumlah[$index];
             $days = $request->durasi[$index];
-            
-            // Hitung finansial kotor otomatis
             $totalHarga = $qty * $days * $produk->harga_sewa;
 
             Transaksi::create([
@@ -68,26 +84,55 @@ class TransaksiController extends Controller
                 'cabang_id'   => $cabangId,
                 'user_id'     => $user->id_user,
                 'total_harga' => $totalHarga,
-                'denda'       => 0
+                'denda'       => $denda,
             ]);
         }
 
         return redirect()->route('transaksi.index')->with('success', 'Semua item transaksi berhasil dicatat!');
     }
 
-    // 4. Menampilkan Form Edit Transaksi Tunggal (Menyelesaikan Error Method Does Not Exist)
+    public function show($id)
+    {
+        $transaksi = Transaksi::with(['produk', 'cabang', 'user'])
+            ->where('id_transaksi', $id)
+            ->firstOrFail();
+        return view('transaksi.show', compact('transaksi'));
+    }
+
     public function edit($id)
     {
-        // Mencari data transaksi berdasarkan ID primary key aslinya
+        $user = Auth::user();
+        // Staff tidak diizinkan mengedit
+        if ($user->role === 'staff') {
+            abort(403, 'Staff tidak diizinkan mengedit transaksi.');
+        }
+
         $transaksi = Transaksi::where('id_transaksi', $id)->firstOrFail();
+
+        // Manager hanya bisa edit transaksi di cabangnya
+        if ($user->role === 'manager' && $transaksi->cabang_id !== $user->cabang_id) {
+            abort(403, 'Anda tidak memiliki akses ke transaksi cabang lain.');
+        }
+
         $produks = Produk::all();
-        
         return view('transaksi.edit', compact('transaksi', 'produks'));
     }
 
-    // 5. Memproses Pembaharuan Data Transaksi & Hitung Uang Ulang
     public function update(Request $request, $id)
     {
+        $user = Auth::user();
+        // Staff tidak diizinkan mengupdate
+        if ($user->role === 'staff') {
+            abort(403, 'Staff tidak diizinkan mengupdate transaksi.');
+        }
+
+        $transaksi = Transaksi::where('id_transaksi', $id)->firstOrFail();
+
+        // Manager hanya bisa update transaksi di cabangnya
+        if ($user->role === 'manager' && $transaksi->cabang_id !== $user->cabang_id) {
+            abort(403, 'Anda tidak memiliki akses ke transaksi cabang lain.');
+        }
+
         $request->validate([
             'produk_id' => 'required|exists:produk,id_produk',
             'jumlah'    => 'required|integer|min:1',
@@ -95,10 +140,7 @@ class TransaksiController extends Controller
             'denda'     => 'required|integer|min:0',
         ]);
 
-        $transaksi = Transaksi::where('id_transaksi', $id)->firstOrFail();
         $produk = Produk::find($request->produk_id);
-
-        // Kalkulasi ulang total harga item pasca perubahan kuantitas
         $totalHarga = $request->jumlah * $request->durasi * $produk->harga_sewa;
 
         $transaksi->update([
@@ -112,12 +154,22 @@ class TransaksiController extends Controller
         return redirect()->route('transaksi.index')->with('success', 'Data transaksi berhasil diperbarui!');
     }
 
-    // 6. Memproses Penghapusan Catatan Transaksi
     public function destroy($id)
     {
-        $transaksi = Transaksi::where('id_transaksi', $id)->firstOrFail();
-        $transaksi->delete();
+        $user = Auth::user();
+        // Staff tidak diizinkan menghapus
+        if ($user->role === 'staff') {
+            abort(403, 'Staff tidak diizinkan menghapus transaksi.');
+        }
 
+        $transaksi = Transaksi::where('id_transaksi', $id)->firstOrFail();
+
+        // Manager hanya bisa hapus transaksi di cabangnya
+        if ($user->role === 'manager' && $transaksi->cabang_id !== $user->cabang_id) {
+            abort(403, 'Anda tidak memiliki akses ke transaksi cabang lain.');
+        }
+
+        $transaksi->delete();
         return redirect()->route('transaksi.index')->with('success', 'Data transaksi berhasil dihapus!');
     }
 }

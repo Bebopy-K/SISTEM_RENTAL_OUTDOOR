@@ -9,6 +9,8 @@ class Kernel extends HttpKernel
     /**
      * The application's global HTTP middleware stack.
      *
+     * These middleware are run during every request to your application.
+     *
      * @var array<int, class-string|string>
      */
     protected $middleware = [
@@ -46,6 +48,8 @@ class Kernel extends HttpKernel
     /**
      * The application's route middleware.
      *
+     * These middleware may be assigned to groups or used individually.
+     *
      * @var array<string, class-string|string>
      */
     protected $routeMiddleware = [
@@ -58,9 +62,12 @@ class Kernel extends HttpKernel
         'signed' => \Illuminate\Routing\Middleware\ValidateSignature::class,
         'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
-        // middleware kustom
-        'role' => \App\Http\Middleware\RoleMiddleware::class,
+
+        // ==========================================
+        // MIDDLEWARE KUSTOM
+        // ==========================================
+        'role' => \App\Http\Middleware\RoleMiddleware::class,   // <- Sudah terdaftar ✅
         'login.limiter' => \App\Http\Middleware\LoginRateLimiter::class,
-        'twofactor' => \App\Http\Middleware\TwoFactorMiddleware::class, // middleware 2FA manual
+        'twofactor' => \App\Http\Middleware\TwoFactorMiddleware::class,
     ];
 }

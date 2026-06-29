@@ -2,18 +2,26 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Cabang extends Model
 {
-    use HasFactory;
-
     protected $table = 'cabang';
     protected $primaryKey = 'id_cabang';
+    public $timestamps = true;
 
     protected $fillable = [
         'kode_cabang',
-        'nama_kota'
+        'nama_kota',
     ];
+
+    public function transaksi()
+    {
+        return $this->hasMany(Transaksi::class, 'cabang_id', 'id_cabang');
+    }
+
+    public function users()
+    {
+        return $this->hasMany(User::class, 'cabang_id', 'id_cabang');
+    }
 }

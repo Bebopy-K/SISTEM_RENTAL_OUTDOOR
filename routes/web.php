@@ -8,6 +8,10 @@ use App\Http\Controllers\OlapController;
 use App\Http\Controllers\GoogleLoginController;
 use App\Http\Controllers\TwoFactorController;
 use App\Http\Controllers\EtlController;
+use App\Http\Controllers\UserController;
+use App\Http\Controllers\CabangController;
+use App\Http\Controllers\ProdukController;
+use App\Http\Controllers\AuditLogController;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -97,8 +101,17 @@ Route::middleware(['auth'])->group(function () {
 // ==========================================
 Route::middleware(['auth', 'twofactor'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-    Route::resource('transaksi', TransaksiController::class)->except(['show']);
-    Route::get('/olap', [OlapController::class, 'index'])->name('olap');
+
+    // Transaksi (hanya untuk superadmin, manager, staff)
+    Route::resource('transaksi', TransaksiController::class)
+        ->except(['show'])
+        ->middleware('role:superadmin,manager,staff');
+
+    // OLAP (hanya untuk superadmin dan manager)
+    Route::get('/olap', [OlapController::class, 'index'])
+        ->name('olap')
+        ->middleware('role:superadmin,manager');
+
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 });
 
@@ -107,6 +120,16 @@ Route::middleware(['auth', 'twofactor'])->group(function () {
 // ==========================================
 Route::middleware(['auth', 'twofactor', 'role:superadmin'])->group(function () {
     Route::post('/etl/sync', [EtlController::class, 'sync'])->name('etl.sync');
+});
+
+// ==========================================
+// RUTE MANAJEMEN USER, CABANG, PRODUK, AUDIT LOG (KHUSUS SUPERADMIN)
+// ==========================================
+Route::middleware(['auth', 'twofactor', 'role:superadmin'])->group(function () {
+    Route::resource('users', UserController::class);
+    Route::resource('cabang', CabangController::class);
+    Route::resource('produk', ProdukController::class);
+    Route::get('/audit-logs', [AuditLogController::class, 'index'])->name('audit.logs');
 });
 
 // Pengalihan /home ke dashboard (tidak perlu 2FA karena hanya redirect)
