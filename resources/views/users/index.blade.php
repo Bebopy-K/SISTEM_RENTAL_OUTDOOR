@@ -12,6 +12,14 @@
         </a>
     </div>
 
+    {{-- NOTIFIKASI UNTUK MANAGER --}}
+    @if(Auth::user()->role === 'manager')
+        <div class="alert alert-info mb-3">
+            <i class="fas fa-info-circle me-1"></i> 
+            Anda hanya dapat mengelola staff di cabang <strong>{{ Auth::user()->cabang->nama_kota ?? 'Anda' }}</strong>.
+        </div>
+    @endif
+
     @if(session('success'))
         <div class="alert alert-success alert-dismissible fade show" role="alert">
             {{ session('success') }}
@@ -44,8 +52,22 @@
                         @forelse($users as $user)
                         <tr>
                             <td>#{{ $user->id_user }}</td>
-                            <td><strong>{{ $user->username }}</strong></td>
-                            <td>{{ $user->email ?? '-' }}</td>
+                            <td>
+                                @if(Auth::user()->role === 'superadmin')
+                                    <strong>{{ $user->username }}</strong>
+                                @else
+                                    <strong>{{ \App\Helpers\DataMaskingHelper::maskUsername($user->username) }}</strong>
+                                    <span class="text-muted d-block" style="font-size:10px;">(masked)</span>
+                                @endif
+                            </td>
+                            <td>
+                                @if(Auth::user()->role === 'superadmin')
+                                    {{ $user->email ?? '-' }}
+                                @else
+                                    {{ \App\Helpers\DataMaskingHelper::maskEmail($user->email ?? '-') }}
+                                    <span class="text-muted d-block" style="font-size:10px;">(masked)</span>
+                                @endif
+                            </td>
                             <td>
                                 @php
                                     $badgeColor = match($user->role) {
@@ -86,5 +108,15 @@
             </div>
         </div>
     </div>
+
+    {{-- INFORMASI DATA MASKING (HANYA UNTUK MANAGER & STAFF) --}}
+    @if(Auth::user()->role !== 'superadmin')
+    <div class="mt-3 text-muted small">
+        <i class="fas fa-shield-alt text-primary me-1"></i>
+        Data sensitif (username & email) telah di-masking untuk melindungi privasi.
+        <br>Contoh: <strong>superadmin</strong> → <strong>s********n</strong>, 
+        <strong>email@domain.com</strong> → <strong>e*********@domain.com</strong>
+    </div>
+    @endif
 </div>
 @endsection

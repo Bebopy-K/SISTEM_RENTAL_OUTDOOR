@@ -10,44 +10,69 @@ use Illuminate\Support\Facades\Auth;
 
 class UserController extends Controller
 {
+    // =============================================
+    // 1. INDEX (Daftar User)
+    // =============================================
     public function index()
     {
-        if (Auth::user()->role !== 'superadmin') {
-            abort(403, 'Hanya superadmin yang dapat mengakses halaman ini.');
-        }
+        $user = Auth::user();
+        $query = User::with('cabang');
 
-        $users = User::with('cabang')->orderBy('id_user', 'desc')->get();
+        if ($user->role === 'manager') {
+            // Manager hanya melihat staff di cabangnya
+            $query->where('cabang_id', $user->cabang_id)
+                  ->where('role', 'staff');
+        }
+        // Superadmin melihat semua user
+
+        $users = $query->orderBy('id_user', 'desc')->get();
         return view('users.index', compact('users'));
     }
 
+    // =============================================
+    // 2. CREATE (Form Tambah User)
+    // =============================================
     public function create()
     {
-        if (Auth::user()->role !== 'superadmin') {
-            abort(403);
+        $user = Auth::user();
+        $cabangs = Cabang::all();
+
+        if ($user->role === 'manager') {
+            // Manager hanya bisa menambah staff di cabangnya sendiri
+            $cabangs = Cabang::where('id_cabang', $user->cabang_id)->get();
+            return view('users.create', compact('cabangs'))->with('restricted_role', 'staff');
         }
 
-        $cabangs = Cabang::all(); // ← PASTIKAN MODEL Cabang
-        return view('users.create', compact('cabangs'));
+        return view('users.create', compact('cabangs'))->with('restricted_role', null);
     }
 
+    // =============================================
+    // 3. STORE (Simpan User Baru)
+    // =============================================
     public function store(Request $request)
     {
-        if (Auth::user()->role !== 'superadmin') {
-            abort(403);
-        }
+        $user = Auth::user();
 
-        $request->validate([
+        $rules = [
             'username' => 'required|string|max:50|unique:users,username',
             'password' => 'required|string|min:6',
-            'role' => 'required|in:superadmin,manager,staff',
-            'cabang_id' => 'nullable|exists:cabang,id_cabang', // ← DIUBAH
+            'cabang_id' => 'nullable|exists:cabang,id_cabang',
             'email' => 'nullable|email|unique:users,email',
-        ]);
+        ];
+
+        if ($user->role === 'manager') {
+            $rules['role'] = 'required|in:staff';
+            $request->merge(['cabang_id' => $user->cabang_id]);
+        } else {
+            $rules['role'] = 'required|in:superadmin,manager,staff';
+        }
+
+        $request->validate($rules);
 
         User::create([
             'username' => $request->username,
             'password' => Hash::make($request->password),
-            'role' => $request->role,
+            'role' => $request->role ?? 'staff',
             'cabang_id' => $request->cabang_id,
             'email' => $request->email,
         ]);
@@ -56,32 +81,51 @@ class UserController extends Controller
             ->with('success', 'User berhasil ditambahkan.');
     }
 
+    // =============================================
+    // 4. EDIT (Form Edit User)
+    // =============================================
     public function edit($id)
     {
-        if (Auth::user()->role !== 'superadmin') {
-            abort(403);
+        $user = Auth::user();
+        $targetUser = User::findOrFail($id);
+        $cabangs = Cabang::all();
+
+        if ($user->role === 'manager') {
+            if ($targetUser->role !== 'staff' || $targetUser->cabang_id !== $user->cabang_id) {
+                abort(403, 'Anda hanya dapat mengedit staff di cabang Anda.');
+            }
+            $cabangs = Cabang::where('id_cabang', $user->cabang_id)->get();
+            return view('users.edit', compact('targetUser', 'cabangs'))->with('restricted_role', 'staff');
         }
 
-        $user = User::findOrFail($id);
-        $cabangs = Cabang::all(); // ← PASTIKAN MODEL Cabang
-
-        return view('users.edit', compact('user', 'cabangs'));
+        return view('users.edit', compact('targetUser', 'cabangs'))->with('restricted_role', null);
     }
 
+    // =============================================
+    // 5. UPDATE (Update User)
+    // =============================================
     public function update(Request $request, $id)
     {
-        if (Auth::user()->role !== 'superadmin') {
-            abort(403);
+        $user = Auth::user();
+        $targetUser = User::findOrFail($id);
+
+        $rules = [
+            'username' => 'required|string|max:50|unique:users,username,' . $id . ',id_user',
+            'cabang_id' => 'nullable|exists:cabang,id_cabang',
+            'email' => 'nullable|email|unique:users,email,' . $id . ',id_user',
+        ];
+
+        if ($user->role === 'manager') {
+            if ($targetUser->role !== 'staff' || $targetUser->cabang_id !== $user->cabang_id) {
+                abort(403, 'Anda tidak memiliki akses ke user ini.');
+            }
+            $rules['role'] = 'required|in:staff';
+            $request->merge(['cabang_id' => $user->cabang_id]);
+        } else {
+            $rules['role'] = 'required|in:superadmin,manager,staff';
         }
 
-        $user = User::findOrFail($id);
-
-        $request->validate([
-            'username' => 'required|string|max:50|unique:users,username,' . $id . ',id_user',
-            'role' => 'required|in:superadmin,manager,staff',
-            'cabang_id' => 'nullable|exists:cabang,id_cabang', // ← DIUBAH
-            'email' => 'nullable|email|unique:users,email,' . $id . ',id_user',
-        ]);
+        $request->validate($rules);
 
         $data = [
             'username' => $request->username,
@@ -95,27 +139,37 @@ class UserController extends Controller
             $data['password'] = Hash::make($request->password);
         }
 
-        $user->update($data);
+        $targetUser->update($data);
 
         return redirect()->route('users.index')
             ->with('success', 'User berhasil diperbarui.');
     }
 
+    // =============================================
+    // 6. DESTROY (Hapus User)
+    // =============================================
     public function destroy($id)
     {
-        if (Auth::user()->role !== 'superadmin') {
-            abort(403);
-        }
+        $user = Auth::user();
+        $targetUser = User::findOrFail($id);
 
-        $user = User::findOrFail($id);
-
-        if ($user->id_user === Auth::id()) {
+        if ($targetUser->id_user === $user->id_user) {
             return redirect()->route('users.index')
                 ->with('error', 'Anda tidak dapat menghapus akun sendiri.');
         }
 
-        $user->delete();
+        if ($user->role === 'manager') {
+            if ($targetUser->role !== 'staff' || $targetUser->cabang_id !== $user->cabang_id) {
+                abort(403, 'Anda tidak memiliki akses untuk menghapus user ini.');
+            }
+        }
 
+        if ($user->role === 'superadmin' && $targetUser->role === 'superadmin' && $targetUser->id_user !== $user->id_user) {
+            return redirect()->route('users.index')
+                ->with('error', 'Anda tidak dapat menghapus superadmin lain.');
+        }
+
+        $targetUser->delete();
         return redirect()->route('users.index')
             ->with('success', 'User berhasil dihapus.');
     }
