@@ -12,6 +12,8 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\CabangController;
 use App\Http\Controllers\ProdukController;
 use App\Http\Controllers\AuditLogController;
+use App\Http\Controllers\MonitoringController;
+use App\Http\Controllers\BackupController;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -100,6 +102,7 @@ Route::middleware(['auth'])->group(function () {
 // RUTE YANG WAJIB LOGIN DAN TELAH LOLOS 2FA
 // ==========================================
 Route::middleware(['auth', 'twofactor'])->group(function () {
+    // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // Transaksi (hanya untuk superadmin, manager, staff)
@@ -112,24 +115,47 @@ Route::middleware(['auth', 'twofactor'])->group(function () {
         ->name('olap')
         ->middleware('role:superadmin,manager');
 
+    // Logout
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
-});
 
-// ==========================================
-// RUTE ETL (KHUSUS SUPERADMIN)
-// ==========================================
-Route::middleware(['auth', 'twofactor', 'role:superadmin'])->group(function () {
-    Route::post('/etl/sync', [EtlController::class, 'sync'])->name('etl.sync');
-});
+    // ==========================================
+    // RUTE MANAJEMEN USER (Superadmin & Manager)
+    // ==========================================
+    Route::middleware(['role:superadmin,manager'])->group(function () {
+        Route::resource('users', UserController::class);
+    });
 
-// ==========================================
-// RUTE MANAJEMEN USER, CABANG, PRODUK, AUDIT LOG (KHUSUS SUPERADMIN)
-// ==========================================
-Route::middleware(['auth', 'twofactor', 'role:superadmin'])->group(function () {
-    Route::resource('users', UserController::class);
-    Route::resource('cabang', CabangController::class);
-    Route::resource('produk', ProdukController::class);
-    Route::get('/audit-logs', [AuditLogController::class, 'index'])->name('audit.logs');
+    // ==========================================
+    // RUTE KHUSUS SUPERADMIN
+    // ==========================================
+    Route::middleware(['role:superadmin'])->group(function () {
+        // ETL
+        Route::post('/etl/sync', [EtlController::class, 'sync'])->name('etl.sync');
+
+        // Master Data (Cabang & Produk)
+        Route::resource('cabang', CabangController::class);
+        Route::resource('produk', ProdukController::class);
+
+        // Audit Log
+        Route::get('/audit-logs', [AuditLogController::class, 'index'])->name('audit.logs');
+
+        // Monitoring
+        Route::get('/monitoring', [MonitoringController::class, 'index'])->name('monitoring');
+
+        // ==========================================
+        // BACKUP & RECOVERY
+        // ==========================================
+        Route::prefix('backup')->name('backup.')->group(function () {
+            Route::get('/', [BackupController::class, 'index'])->name('index');
+            Route::post('/full', [BackupController::class, 'fullBackup'])->name('full');
+            Route::post('/incremental', [BackupController::class, 'incrementalBackup'])->name('incremental');
+            Route::post('/differential', [BackupController::class, 'differentialBackup'])->name('differential');
+            Route::get('/restore/{id}', [BackupController::class, 'restore'])->name('restore');
+            Route::get('/download/{id}', [BackupController::class, 'download'])->name('download');
+            Route::delete('/{id}', [BackupController::class, 'destroy'])->name('destroy');
+            Route::get('/drp', [BackupController::class, 'drp'])->name('drp');
+        });
+    });
 });
 
 // Pengalihan /home ke dashboard (tidak perlu 2FA karena hanya redirect)

@@ -49,7 +49,16 @@
                         </li>
                         @endif
 
-                        {{-- MASTER DATA (HANYA UNTUK SUPERADMIN) --}}
+                        {{-- MANAJEMEN USER (UNTUK MANAGER) --}}
+                        @if(Auth::user()->role === 'manager')
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ route('users.index') }}">
+                                <i class="fas fa-users"></i> Manajemen Staff
+                            </a>
+                        </li>
+                        @endif
+
+                        {{-- MASTER DATA, AUDIT LOG, MONITORING, BACKUP (HANYA UNTUK SUPERADMIN) --}}
                         @if(Auth::user()->role === 'superadmin')
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" id="masterDataDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -75,10 +84,24 @@
                             </ul>
                         </li>
 
-                        {{-- AUDIT LOG (KHUSUS SUPERADMIN) --}}
+                        {{-- AUDIT LOG --}}
                         <li class="nav-item">
                             <a class="nav-link" href="{{ route('audit.logs') }}">
                                 <i class="fas fa-history"></i> Audit Log
+                            </a>
+                        </li>
+
+                        {{-- MONITORING --}}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ route('monitoring') }}">
+                                <i class="fas fa-heartbeat"></i> Monitoring
+                            </a>
+                        </li>
+
+                        {{-- BACKUP --}}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ route('backup.index') }}">
+                                <i class="fas fa-database"></i> Backup
                             </a>
                         </li>
                         @endif

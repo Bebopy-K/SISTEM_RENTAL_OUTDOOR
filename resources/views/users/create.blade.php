@@ -44,12 +44,17 @@
 
                     <div class="col-md-6 mb-3">
                         <label for="role" class="form-label fw-bold">Role <span class="text-danger">*</span></label>
-                        <select name="role" id="role" class="form-select @error('role') is-invalid @enderror" required>
-                            <option value="">-- Pilih Role --</option>
-                            <option value="superadmin" {{ old('role') == 'superadmin' ? 'selected' : '' }}>Superadmin</option>
-                            <option value="manager" {{ old('role') == 'manager' ? 'selected' : '' }}>Manager</option>
-                            <option value="staff" {{ old('role') == 'staff' ? 'selected' : '' }}>Staff</option>
-                        </select>
+                        @if(isset($restricted_role) && $restricted_role === 'staff')
+                            <input type="hidden" name="role" value="staff">
+                            <div class="form-control bg-light">Staff (hanya staff yang dapat dibuat)</div>
+                        @else
+                            <select name="role" id="role" class="form-select @error('role') is-invalid @enderror" required>
+                                <option value="">-- Pilih Role --</option>
+                                <option value="superadmin" {{ old('role') == 'superadmin' ? 'selected' : '' }}>Superadmin</option>
+                                <option value="manager" {{ old('role') == 'manager' ? 'selected' : '' }}>Manager</option>
+                                <option value="staff" {{ old('role') == 'staff' ? 'selected' : '' }}>Staff</option>
+                            </select>
+                        @endif
                         @error('role')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
@@ -57,15 +62,21 @@
 
                     <div class="col-md-6 mb-3">
                         <label for="cabang_id" class="form-label fw-bold">Cabang</label>
-                        <select name="cabang_id" id="cabang_id" class="form-select @error('cabang_id') is-invalid @enderror">
-                            <option value="">-- Tidak Terikat Cabang --</option>
-                            @foreach($cabangs as $cabang)
-                                <option value="{{ $cabang->id_cabang }}" {{ old('cabang_id') == $cabang->id_cabang ? 'selected' : '' }}>
-                                    {{ $cabang->nama_kota }}
-                                </option>
-                            @endforeach
-                        </select>
-                        <small class="text-muted">Khusus superadmin, biarkan kosong.</small>
+                        @if(isset($restricted_role) && $restricted_role === 'staff')
+                            <input type="hidden" name="cabang_id" value="{{ Auth::user()->cabang_id }}">
+                            <div class="form-control bg-light">{{ Auth::user()->cabang->nama_kota ?? 'Cabang Anda' }}</div>
+                            <small class="text-muted">Staff hanya dapat ditambahkan ke cabang Anda sendiri.</small>
+                        @else
+                            <select name="cabang_id" id="cabang_id" class="form-select @error('cabang_id') is-invalid @enderror">
+                                <option value="">-- Tidak Terikat Cabang --</option>
+                                @foreach($cabangs as $cabang)
+                                    <option value="{{ $cabang->id_cabang }}" {{ old('cabang_id') == $cabang->id_cabang ? 'selected' : '' }}>
+                                        {{ $cabang->nama_kota }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            <small class="text-muted">Khusus superadmin, biarkan kosong.</small>
+                        @endif
                         @error('cabang_id')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
