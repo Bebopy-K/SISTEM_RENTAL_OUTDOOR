@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Transaksi;
 use App\Models\Cabang;
+use App\Models\EtlLog; // <-- Tambahkan ini
 use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
@@ -19,35 +20,25 @@ class DashboardController extends Controller
         // 1. Tentukan cabang yang akan ditampilkan berdasarkan role
         // =====================================================
         $isSuperadmin = ($user->role === 'superadmin');
-        $isManager = ($user->role === 'manager' || $user->role === 'admin_cabang'); // support legacy admin_cabang
+        $isManager = ($user->role === 'manager' || $user->role === 'admin_cabang');
         $isStaff = ($user->role === 'staff');
 
-        // Query dasar untuk transaksi (dari MySQL/OLTP)
         $queryTransaksi = Transaksi::query();
-
-        // Daftar cabang untuk filter (hanya untuk superadmin)
         $daftarCabang = null;
 
         if ($isSuperadmin) {
-            // Superadmin: bisa melihat semua cabang atau filter per cabang
             $daftarCabang = Cabang::orderBy('nama_kota')->get();
             if ($selectedBranch !== 'all' && $selectedBranch) {
                 $queryTransaksi->where('cabang_id', $selectedBranch);
             }
         } elseif ($isManager) {
-            // Manager: hanya melihat cabangnya sendiri
             $cabangId = $user->cabang_id;
             if (!$cabangId) {
                 abort(403, 'Akun manager tidak terhubung ke cabang tertentu.');
             }
             $queryTransaksi->where('cabang_id', $cabangId);
-            // Filter hanya untuk tampilan, tidak perlu dropdown
             $selectedBranch = $cabangId;
         } elseif ($isStaff) {
-            // Staff: hanya melihat cabangnya sendiri dan hanya data transaksi yang dia buat (opsional)
-            // Jika ingin staff hanya melihat transaksi yang dia buat, tambahkan:
-            // $queryTransaksi->where('user_id', $user->id_user);
-            // Namun karena staff hanya boleh melihat data cabangnya, kita batasi ke cabang
             $cabangId = $user->cabang_id;
             if (!$cabangId) {
                 abort(403, 'Akun staff tidak terhubung ke cabang tertentu.');
@@ -55,7 +46,6 @@ class DashboardController extends Controller
             $queryTransaksi->where('cabang_id', $cabangId);
             $selectedBranch = $cabangId;
         } else {
-            // Role tidak dikenal
             abort(403, 'Anda tidak memiliki akses ke dashboard.');
         }
 
@@ -68,7 +58,7 @@ class DashboardController extends Controller
         $akumulasiFinansial = $totalPendapatan + $totalDenda;
 
         // =====================================================
-        // 3. Data untuk grafik tren bulanan (dari transaksi yang sudah difilter)
+        // 3. Data grafik tren bulanan
         // =====================================================
         $trenBulanan = (clone $queryTransaksi)
             ->select(
@@ -92,7 +82,15 @@ class DashboardController extends Controller
         }
 
         // =====================================================
-        // 4. Kirim ke view
+        // 4. Ambil data ETL terakhir (hanya untuk superadmin)
+        // =====================================================
+        $lastEtl = null;
+        if ($isSuperadmin) {
+            $lastEtl = EtlLog::orderBy('finished_at', 'desc')->first();
+        }
+
+        // =====================================================
+        // 5. Kirim ke view
         // =====================================================
         return view('dashboard', compact(
             'user',
@@ -101,7 +99,8 @@ class DashboardController extends Controller
             'totalTransaksiCount',
             'akumulasiFinansial',
             'chartLabels',
-            'chartData'
+            'chartData',
+            'lastEtl' // <-- Tambahkan ini
         ));
     }
 }
